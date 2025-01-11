@@ -32,7 +32,7 @@ void field_simulation(InfileHeader *header, ModelsParams *params, const Model **
             
             Vector new_sph_pos = {
                 .r = sph_pos.r,
-                .theta = (90. + the0a) * DEF_TO_RAD,
+                .theta = (90. - the0a) * DEF_TO_RAD,
                 .phi = phi0a * DEF_TO_RAD
             };
 
