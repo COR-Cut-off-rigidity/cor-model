@@ -5,6 +5,7 @@
 #include "coefs/igrf_11_coefs.h"
 #include "coefs/igrf_12_coefs.h"
 #include "coefs/igrf_13_coefs.h"
+#include "coefs/igrf_14_coefs.h"
 #include "coefs/hist_coefs.h"
 #include "coefs/cals10k_2_coefs.h"
 

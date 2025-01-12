@@ -59,6 +59,14 @@ static const Model igrf_13 = {
     .calc_fun = internal_calc
 };
 
+static const Model igrf_14 = {
+    .name = "IGRF-14",
+    .version = "igrf14",
+    .setup_data = &IGRF_14_COEFS,
+    .setup_fun = internal_setup,
+    .calc_fun = internal_calc
+};
+
 static const Model hist = {
     .name = "Historical (0-1968 CE)",
     .version = "hist",
@@ -99,7 +107,7 @@ static const Model chaos_7_16 = {
     .calc_fun = chaos_7_16_calc
 };
 
-const Model *internal_models[] = { &igrf_13, &igrf_12, &igrf_11, &igrf_10, &igrf_9, &hist, &cals10k_2, NULL };
+const Model *internal_models[] = { &igrf_14, &igrf_13, &igrf_12, &igrf_11, &igrf_10, &igrf_9, &hist, &cals10k_2, NULL };
 const Model *external_models[] = { &ts_05, &t_96, NULL };
 const Model *crustal_models[] = { &chaos_7_16, NULL };
 

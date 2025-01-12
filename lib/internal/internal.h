@@ -24,6 +24,7 @@ extern const InternalModelCoefs IGRF_10_COEFS;
 extern const InternalModelCoefs IGRF_11_COEFS;
 extern const InternalModelCoefs IGRF_12_COEFS;
 extern const InternalModelCoefs IGRF_13_COEFS;
+extern const InternalModelCoefs IGRF_14_COEFS;
 extern const InternalModelCoefs HIST_COEFS;
 extern const InternalModelCoefs CALS10K_2_COEFS;
 

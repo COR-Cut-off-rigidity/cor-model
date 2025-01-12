@@ -262,7 +262,7 @@ int main(int argc, char **argv) {
     args_parse(argc, argv, &args);
 
     if(!args.internal_model_name && !args.external_model_name && !args.crustal_model_name) {
-        args.internal_model_name = "igrf13";
+        args.internal_model_name = "igrf14";
     }
 
     int index = 0;
