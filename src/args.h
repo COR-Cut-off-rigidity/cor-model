@@ -11,8 +11,9 @@ typedef struct {
     char *external_model_name;
     char *internal_model_name;
     char *crustal_model_name;
-    char *steps_count;
-    char *tu_angle;
+    char *steps_limit;
+    char *epsilon_angle;
+    char *nk_limit;
     char *mode;
     char *particle_type;
     uint32_t options;

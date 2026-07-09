@@ -2,8 +2,16 @@
 #include <string.h>
 #include "args.h"
 
-const char *argp_program_version = "cor-model 3.0";
-const char *argp_program_bug_address = "jan.villim@student.tuke.sk";
+#ifndef DEF_COR_ENGINE_AUTHOR_EMAIL
+#define DEF_COR_ENGINE_AUTHOR_EMAIL NULL
+#endif
+
+#define ARGP_KEY_EPSILON_ANGLE 500
+#define ARGP_KEY_STEPS_LIMIT 501
+#define ARGP_KEY_NK_LIMIT 502
+
+const char *argp_program_version = "cor-engine 3.2";
+const char *argp_program_bug_address = DEF_COR_ENGINE_AUTHOR_EMAIL;
 
 static const char doc[] = "Trajectory simulation of cosmic ray particle in Earth's magnetosphere";
 static const char args_doc[] = "INFILE";
@@ -11,14 +19,15 @@ static const char args_doc[] = "INFILE";
 static struct argp_option options[] = {
     { "par", 'p', 0, 0, "Parallel computation" },
     { "output", 'o', "FILE", 0, "Output to FILE instead of standard output. This option is required for trajectory calculation mode." },
-    { "steps-count", 's', "COUNT", 0, "Maximal single trajectory steps count (default: 25000)" },
-    { "tu-angle", 'u', "RAD", 0, "TU angle, specifies the precision of the trajectory calculation (default: 0.01 rad)" },
+    { "steps-limit", ARGP_KEY_STEPS_LIMIT, "LIMIT", 0, "Single trajectory steps limit (default: 25000)" },
+    { "epsilon", ARGP_KEY_EPSILON_ANGLE, "RAD", 0, "Epsilon angle, smaller values yield higher trajectory precision (default: 0.01 rad)" },
+    { "nk-limit", ARGP_KEY_NK_LIMIT, "LIMIT", 0, "Circle division limit; larger values yield higher trajectory precision (default: 50000)" },
     { "mode", 'm', "MODE", 0, "Calculation modes: cutoff, field, trajectory (default: cutoff)"},
     { "particle-type", 't', "TYPE", 0, "Particle type: electron or proton (default: proton)" },
     { 0, 0, 0, 0, "Geomagnetic field models:" },
-    { "internal-field", 'i', "MODEL", 0, "Use internal field model. Supported internal field models: igrf9-13, hist, cals10k.2 (default: igrf13)" },
+    { "internal-field", 'i', "MODEL", 0, "Use internal field model. Supported internal field models: igrf9-14, chaos7.16-7.18, chaos8.1-8.3, hist, cals10k.2 (default: igrf14)" },
     { "external-field", 'e', "MODEL", 0, "Use external field model. Supported external field models: ts05, t96 (default: none)" },
-    { "crustal-field", 'c', "MODEL", 0, "Use crustal field model. Supported crustal field models: chaos7.16 (default: none)"},
+    { "crustal-field", 'c', "MODEL", 0, "Use crustal field model. Supported crustal field models: chaos7.16-7.18, chaos8.1-8.3 (default: none)"},
     { 0 }
 };
 
@@ -31,12 +40,6 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             break;
         case 'o':
             arguments->output_file_name = arg;
-            break;
-        case 's':
-            arguments->steps_count = arg;
-            break;
-        case 'u':
-            arguments->tu_angle = arg;
             break;
         case 'm':
             arguments->mode = arg;
@@ -52,6 +55,15 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             break;
         case 'c':
             arguments->crustal_model_name = arg;
+            break;
+        case ARGP_KEY_STEPS_LIMIT:
+            arguments->steps_limit = arg;
+            break;
+        case ARGP_KEY_EPSILON_ANGLE:
+            arguments->epsilon_angle = arg;
+            break;
+        case ARGP_KEY_NK_LIMIT:
+            arguments->nk_limit = arg;
             break;
         case ARGP_KEY_ARG:
             if (state->arg_num >= 1) {

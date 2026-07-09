@@ -1,6 +1,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <calc_time.h>
+
 #define DEF_PI 3.141592654
 #define DEF_2PI 6.28318531
 #define DEF_RE 6.3712e+06
@@ -29,13 +31,7 @@ typedef struct {
     double fi0;
     double the1;
     double fi1;
-    int iy;
-    int mes;
-    int ide;
-    int id;
-    int ih;
-    int min;
-    int is;
+    CalcTime time;
     union {
         struct {
             double zn;

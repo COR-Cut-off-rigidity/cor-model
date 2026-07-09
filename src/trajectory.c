@@ -3,13 +3,19 @@
 #include <math.h>
 #include <omp.h>
 
-void trajectory_simulation_cutoff(InfileHeader *header, const Model **models, ModelsParams *models_params, FILE *outfile, uint64_t step_limit, double tu_angle, double particle_mass, uint32_t parallel) {
+void trajectory_simulation_cutoff(const TrajectorySimulationParams *params, const InfileHeader *header, const ModelsParams *model_params, const Model **models, FILE *outfile) {
     const int rig_values_size = (int) round((header->rk - header->rig) / header->del);
     int nza = 0;
     double rmx1 = 0., rmx2 = 0., rmi = header->rk;
 
+    double particle_mass = params->particle_mass;
+    double epsilon_angle = params->epsilon_angle;
+    double nk_limit = params->nk_limit;
+    uint64_t steps_limit = params->steps_limit;
+    uint32_t parallel = params->parallel;
+
     #pragma omp parallel for ordered schedule(dynamic, 1) reduction(+:nza) if (parallel)
-    for(int i = 0; i <= rig_values_size; i++) {
+    for (int i = 0; i <= rig_values_size; i++) {
         int nk0 = header->nk1;
         double thread_rig = header->rig + i * header->del;
         double alength = 0., time = 0.;
@@ -31,22 +37,22 @@ void trajectory_simulation_cutoff(InfileHeader *header, const Model **models, Mo
         sph_to_car(&sph_pos, &car_pos);
 
         Vector gsm_pos;
-        geo_to_gsm(&car_pos, &gsm_pos, models_params->A1, models_params->A2, models_params->A3);
+        external_geo_to_gsm(&model_params->external_geogsm_matrix, car_pos.x, car_pos.y, car_pos.z, &gsm_pos.x, &gsm_pos.y, &gsm_pos.z);
 
         Vector car_field;
-        calculate_field(gsm_pos, &car_field, models, models_params);
+        calculate_field(gsm_pos, &car_field, models, model_params);
         double b = 1.E-09*sqrt(car_field.x*car_field.x + car_field.y*car_field.y + car_field.z*car_field.z);
 
         Vector car_vel;
         sph_to_car(&sph_vel, &car_vel);
         double v = sph_vel.r;
-        unsigned int step = 0;
+        uint64_t step = 0;
 
         do {
             step++;
 
             double vc = v / DEF_C;
-            if(vc > 1.){
+            if (vc > 1.) {
                 nza += 1;
                 #pragma omp atomic write
                 rmx1 = fmax(rmx1, thread_rig);
@@ -66,10 +72,10 @@ void trajectory_simulation_cutoff(InfileHeader *header, const Model **models, Mo
             v = sqrt(car_vel.x*car_vel.x + car_vel.y*car_vel.y + car_vel.z*car_vel.z);
 
             const double gc = (car_vel.x*prev_car_vel.x + car_vel.y*prev_car_vel.y + car_vel.z*prev_car_vel.z)/(v*sph_vel.r);
-            if(gc < 1.) {
+            if (gc < 1.) {
                 const double gs = sqrt((1.-gc) * (1.+gc));
                 const double gu = atan2(gs, gc);
-                if(gu >= tu_angle && nk0 <= 50000) {
+                if (gu >= epsilon_angle && nk0 <= nk_limit) {
                     nk0 *= 2;
                     car_pos = prev_car_pos;
                     car_vel = prev_car_vel;
@@ -79,15 +85,15 @@ void trajectory_simulation_cutoff(InfileHeader *header, const Model **models, Mo
             }
 
             car_to_sph(&car_pos, &sph_pos);
-            geo_to_gsm(&car_pos, &gsm_pos, models_params->A1, models_params->A2, models_params->A3);
+            external_geo_to_gsm(&model_params->external_geogsm_matrix, car_pos.x, car_pos.y, car_pos.z, &gsm_pos.x, &gsm_pos.y, &gsm_pos.z);
 
             const double pax = (gsm_pos.x/DEF_RE + 25.3)/36.08;
             const double paz = (gsm_pos.y*gsm_pos.y + gsm_pos.z*gsm_pos.z)/(DEF_RE*DEF_RE);
             const double r = sph_pos.r/DEF_RE;
             const double paus = pax*pax + paz/459.6736;
 
-            if(r >= 25. || paus > 1.) {
-                if((r >= 25. && fabs(r - 25.) < 0.002) || (r <= 25. && paus > 1. && fabs(paus - 1.) < 0.002)) {
+            if (r >= 25. || paus > 1.) {
+                if ((r >= 25. && fabs(r - 25.) < 0.002) || (r <= 25. && paus > 1. && fabs(paus - 1.) < 0.002)) {
                     const double td = 90. - (sph_pos.theta / DEF_TO_RAD);
                     const double fei = sph_pos.phi / DEF_TO_RAD;
                     
@@ -107,7 +113,7 @@ void trajectory_simulation_cutoff(InfileHeader *header, const Model **models, Mo
                     double ast = atan2(-v_sp.theta*s + v_sp.r*c, dm) / DEF_TO_RAD;
                     double asf = (sph_pos.phi + atan2(v_sp.phi, va)) / DEF_TO_RAD;
 
-                    if(asf > 360.) {
+                    if (asf > 360.) {
                         asf -= 360.;
                     }
 
@@ -130,21 +136,21 @@ void trajectory_simulation_cutoff(InfileHeader *header, const Model **models, Mo
                 continue;
             }
 
-            if(r < 1.) {
+            if (r < 1.) {
                 nza += 1;
                 #pragma omp atomic write
                 rmx1 = fmax(rmx1, thread_rig);
                 break;
             }
 
-            if(step > step_limit || sph_pos.phi > 31.4) {
+            if (step > steps_limit || sph_pos.phi > 31.4) {
                 nza += 1;
                 #pragma omp atomic write
                 rmx2 = fmax(rmx2, thread_rig);
                 break;
             }
 
-            calculate_field(gsm_pos, &car_field, models, models_params);
+            calculate_field(gsm_pos, &car_field, models, model_params);
             b = 1.E-09*sqrt(car_field.x*car_field.x + car_field.y*car_field.y + car_field.z*car_field.z);
 
             time = time + t/nk0;
@@ -160,10 +166,15 @@ void trajectory_simulation_cutoff(InfileHeader *header, const Model **models, Mo
     fprintf(outfile, "  CUTOFF with rigidities P(S),P(C),P(M) are:\n%12.5f%12.5f%12.5f\n\n", rmi, rmx, rms);
 }
 
-void trajectory_simulation(InfileHeader *header, const Model **models, ModelsParams *models_params, FILE *tragsm, FILE *trasph, uint64_t step_limit, double tu_angle, double particle_mass) {
+void trajectory_simulation(const TrajectorySimulationParams *params, const InfileHeader *header, const ModelsParams *model_params, const Model **models, FILE *tragsm, FILE *trasph) {
     const int rig_values_size = (int) round((header->rk - header->rig) / header->del);
 
-    for(int i = 0; i <= rig_values_size; i++) {
+    double particle_mass = params->particle_mass;
+    double epsilon_angle = params->epsilon_angle;
+    double nk_limit = params->nk_limit;
+    uint64_t steps_limit = params->steps_limit;
+
+    for (int i = 0; i <= rig_values_size; i++) {
         int nk0 = header->nk1;
         double thread_rig = header->rig + i * header->del;
         double alength = 0., time = 0.;
@@ -185,22 +196,22 @@ void trajectory_simulation(InfileHeader *header, const Model **models, ModelsPar
         sph_to_car(&sph_pos, &car_pos);
 
         Vector gsm_pos;
-        geo_to_gsm(&car_pos, &gsm_pos, models_params->A1, models_params->A2, models_params->A3);
+        external_geo_to_gsm(&model_params->external_geogsm_matrix, car_pos.x, car_pos.y, car_pos.z, &gsm_pos.x, &gsm_pos.y, &gsm_pos.z);
 
         Vector car_field;
-        calculate_field(gsm_pos, &car_field, models, models_params);
+        calculate_field(gsm_pos, &car_field, models, model_params);
         double b = 1.E-09*sqrt(car_field.x*car_field.x + car_field.y*car_field.y + car_field.z*car_field.z);
 
         Vector car_vel;
         sph_to_car(&sph_vel, &car_vel);
         double v = sph_vel.r;
-        unsigned int step = 0;
+        uint64_t step = 0;
 
         do {
             step++;
 
             double vc = v / DEF_C;
-            if(vc > 1.) {
+            if (vc > 1.) {
                 break;
             }
 
@@ -217,10 +228,10 @@ void trajectory_simulation(InfileHeader *header, const Model **models, ModelsPar
             v = sqrt(car_vel.x*car_vel.x + car_vel.y*car_vel.y + car_vel.z*car_vel.z);
 
             const double gc = (car_vel.x*prev_vel.x + car_vel.y*prev_vel.y + car_vel.z*prev_vel.z)/(v*sph_vel.r);
-            if(gc < 1.) {
+            if (gc < 1.) {
                 const double gs = sqrt((1.-gc) * (1.+gc));
                 const double gu = atan2(gs, gc);
-                if(gu >= tu_angle && nk0 <= 50000) {
+                if (gu >= epsilon_angle && nk0 <= nk_limit) {
                     nk0 *= 2;
                     car_pos = prev_pos;
                     car_vel = prev_vel;
@@ -230,7 +241,7 @@ void trajectory_simulation(InfileHeader *header, const Model **models, ModelsPar
             }
 
             car_to_sph(&car_pos, &sph_pos);
-            geo_to_gsm(&car_pos, &gsm_pos, models_params->A1, models_params->A2, models_params->A3);
+            external_geo_to_gsm(&model_params->external_geogsm_matrix, car_pos.x, car_pos.y, car_pos.z, &gsm_pos.x, &gsm_pos.y, &gsm_pos.z);
 
             const double pax = (gsm_pos.x/DEF_RE + 25.3)/36.08;
             const double paz = (gsm_pos.y*gsm_pos.y + gsm_pos.z*gsm_pos.z)/(DEF_RE*DEF_RE);
@@ -239,8 +250,8 @@ void trajectory_simulation(InfileHeader *header, const Model **models, ModelsPar
             const double td = 90. - (sph_pos.theta / DEF_TO_RAD);
             const double fei = sph_pos.phi / DEF_TO_RAD;
 
-            if(r >= 25. || paus > 1.) {
-                if((r >= 25. && fabs(r - 25.) < 0.002) || (r <= 25. && paus > 1. && fabs(paus - 1.) < 0.002)) {
+            if (r >= 25. || paus > 1.) {
+                if ((r >= 25. && fabs(r - 25.) < 0.002) || (r <= 25. && paus > 1. && fabs(paus - 1.) < 0.002)) {
                     break;
                 }
 
@@ -251,21 +262,21 @@ void trajectory_simulation(InfileHeader *header, const Model **models, ModelsPar
                 continue;
             }
 
-            if(r < 1. || step > step_limit || sph_pos.phi > 31.4) {
+            if (r < 1. || step > steps_limit || sph_pos.phi > 31.4) {
                 break;
             }
 
-            calculate_field(gsm_pos, &car_field, models, models_params);
+            calculate_field(gsm_pos, &car_field, models, model_params);
             b = 1.E-09*sqrt(car_field.x*car_field.x + car_field.y*car_field.y + car_field.z*car_field.z);
 
             time = time + t/nk0;
             alength += sqrt((car_pos.x-prev_pos.x)*(car_pos.x-prev_pos.x) + (car_pos.y-prev_pos.y)*(car_pos.y-prev_pos.y) + (car_pos.z-prev_pos.z)*(car_pos.z-prev_pos.z));
             
             #pragma omp ordered            
-            fprintf(tragsm, "%6d%17.5f%17.5f%17.5f%14.2f%15.10f%18.2f\n", step, gsm_pos.x, gsm_pos.y, gsm_pos.z, v, time, alength);
+            fprintf(tragsm, "%6ld%17.5f%17.5f%17.5f%14.2f%15.10f%18.2f\n", step, gsm_pos.x, gsm_pos.y, gsm_pos.z, v, time, alength);
 
             #pragma omp ordered
-            fprintf(trasph, "%6d%17.5f%17.5f%17.5f%14.2f%15.10f%18.2f\n", step, r, td, fei, v, time, alength);
+            fprintf(trasph, "%6ld%17.5f%17.5f%17.5f%14.2f%15.10f%18.2f\n", step, r, td, fei, v, time, alength);
             
             nk0 = header->nk1;
         } while(1);

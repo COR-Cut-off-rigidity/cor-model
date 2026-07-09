@@ -9,11 +9,11 @@ void field_simulation(InfileHeader *header, ModelsParams *params, const Model **
 
     int n_the = 0, n_phi = 0;
     
-    if(header->lat_step > 0.) {
+    if (header->lat_step > 0.) {
         n_the = (int) (del_the / header->lat_step);
     }
 
-    if(header->lon_step > 0.) {
+    if (header->lon_step > 0.) {
         n_phi = (int) (del_phi / header->lon_step);
     }
 
@@ -23,11 +23,11 @@ void field_simulation(InfileHeader *header, ModelsParams *params, const Model **
         .phi = .0
     };
 
-    for(int j = 0; j <= n_the; j++) {
+    for (int j = 0; j <= n_the; j++) {
         double the0a = header->the0 + (double)(j*header->lat_step);
 
         #pragma omp parallel for ordered schedule(static, 1) if (parallel)
-        for(int i = 0; i < n_phi; i++) {
+        for (int i = 0; i < n_phi; i++) {
             double phi0a = header->fi0 + (double)(i*header->lon_step);
             
             Vector new_sph_pos = {
@@ -40,7 +40,7 @@ void field_simulation(InfileHeader *header, ModelsParams *params, const Model **
             sph_to_car(&new_sph_pos, &pos);
 
             Vector gsm_pos;
-            geo_to_gsm(&pos, &gsm_pos, params->A1, params->A2, params->A3);
+            external_geo_to_gsm(&params->external_geogsm_matrix, pos.x, pos.y, pos.z, &gsm_pos.x, &gsm_pos.y, &gsm_pos.z);
 
             Vector geo_field;
             calculate_field(gsm_pos, &geo_field, models, params);
@@ -48,7 +48,7 @@ void field_simulation(InfileHeader *header, ModelsParams *params, const Model **
             double b = sqrt(geo_field.x*geo_field.x + geo_field.y*geo_field.y + geo_field.z*geo_field.z);
 
             #pragma omp ordered
-            fprintf(outfile, "%9.2f%9.2f%11.2f%11.2f%11.2f%11.2f\n", the0a, phi0a, b, geo_field.x, geo_field.y, geo_field.z);
+            fprintf(outfile, "%9.2f %9.2f %11.6f %11.6f %11.6f %11.6f\n", the0a, phi0a, b, geo_field.x, geo_field.y, geo_field.z);
         }
     }
 }
