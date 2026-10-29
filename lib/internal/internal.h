@@ -5,7 +5,6 @@
 #include <calc_time.h>
 
 typedef struct {
-    double *A;
     double *coefs;
     uint32_t nm_max;
 } InternalModelContext;

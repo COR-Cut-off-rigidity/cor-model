@@ -64,12 +64,11 @@ int internal_recalc(const InternalModelCoefs *model_coefs, const CalcTime *time,
     int nm_max_1 = nm_max + 1;
     int coefs_size = (nm_max_1 * nm_max) / 2 + nm_max_1;
 
-    double *memory = malloc((2*nm_max_1 + coefs_size*3) * sizeof(double));
-    if (memory == NULL) {
+    double *coefs = malloc(coefs_size*3 * sizeof(double));
+    if (coefs == NULL) {
         return -1;
     }
 
-    double *coefs = memory + 2*nm_max_1;
     const GHTime *older_coefs = model_coefs->coefs[coef_index];
     const GHTime *newer_coefs = model_coefs->coefs[coef_index + 1];
     const double *Gx = older_coefs->G;
@@ -128,15 +127,13 @@ int internal_recalc(const InternalModelCoefs *model_coefs, const CalcTime *time,
         }
     }
 
-    internal_model_context->A = memory;
     internal_model_context->coefs = coefs;
     internal_model_context->nm_max = nm_max;
     return 0;
 }
 
 void internal_clear(InternalModelContext *internal_model_context) {
-    free(internal_model_context->A);
-    internal_model_context->A = NULL;
+    free(internal_model_context->coefs);
     internal_model_context->coefs = NULL;
 }
 
@@ -164,12 +161,13 @@ void internal_geo(const InternalModelContext *internal_model_context, double XGE
     
     const int K = NM+1;
 
+    double A[2*K];
     const double PP = 1./R;
     double P = PP;
     for (int i = 1, j = 0; i <= K; ++i, j += 2) {
         P = P * PP;
-        internal_model_context->A[j] = P;
-        internal_model_context->A[j + 1] = P * i;
+        A[j] = P;
+        A[j + 1] = P * i;
     }
 
     P = 1.;
@@ -188,8 +186,8 @@ void internal_geo(const InternalModelContext *internal_model_context, double XGE
             double W = E*Y + HH*X;
 
             int a_j = 2*j;
-            double AN = internal_model_context->A[a_j];
-            BBR = BBR + internal_model_context->A[a_j + 1]*W*Q;
+            double AN = A[a_j];
+            BBR = BBR + A[a_j + 1]*W*Q;
             BBT = BBT - AN*W*Z;
             BI = BI + AN*(E*X - HH*Y)*Q;
 
