@@ -87,7 +87,7 @@ int internal_recalc(const InternalModelCoefs *model_coefs, const CalcTime *time,
     } else {
         // interpolate
         double years_diff = newer_coefs->year - older_coefs->year;
-        double F2 = (year_decimal - year) / years_diff;
+        double F2 = (year_decimal - older_coefs->year) / years_diff;
         double F1 = 1. - F2;
         for (int i = 0, j = 0; i < coefs_size; ++i, j += 3) {
             coefs[j] = Gx[i] * F1 + Gy[i] * F2;
