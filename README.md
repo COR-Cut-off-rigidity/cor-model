@@ -4,6 +4,8 @@
 
 # COR-Engine: Trajectory simulation of cosmic rays in the Earth's magnetosphere
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23779124.svg)](https://doi.org/10.5281/zenodo.23779124)
+
 `cor` (cor-engine) traces cosmic-ray particle trajectories through the Earth's magnetosphere. It computes cutoff rigidities, which describe the spectrum of allowed and forbidden rigidities at a given location. It can also compute a single particle trajectory, or map the geomagnetic field on a latitude/longitude grid.
 
 The total geomagnetic field is the sum of up to three models:
