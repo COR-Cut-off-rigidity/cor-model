@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
-project(cor C)
+project(cor VERSION 3.2.0 LANGUAGES C)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)

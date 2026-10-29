@@ -28,6 +28,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ts05)
 target_link_libraries(${PROJECT_NAME} PRIVATE t96)
 target_link_libraries(${PROJECT_NAME} PRIVATE crustal)
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE DEF_COR_ENGINE_VERSION="${PROJECT_VERSION}")
+
 if(DEFINED ENV{COR_ENGINE_AUTHOR_EMAIL})
     target_compile_definitions(${PROJECT_NAME} PUBLIC DEF_COR_ENGINE_AUTHOR_EMAIL="$ENV{COR_ENGINE_AUTHOR_EMAIL}")
 endif()

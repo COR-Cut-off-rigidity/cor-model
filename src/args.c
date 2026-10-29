@@ -10,7 +10,7 @@
 #define ARGP_KEY_STEPS_LIMIT 501
 #define ARGP_KEY_NK_LIMIT 502
 
-const char *argp_program_version = "cor-engine 3.2";
+const char *argp_program_version = "cor-engine " DEF_COR_ENGINE_VERSION;
 const char *argp_program_bug_address = DEF_COR_ENGINE_AUTHOR_EMAIL;
 
 static const char doc[] = "Trajectory simulation of cosmic ray particle in Earth's magnetosphere";
